@@ -1,0 +1,7 @@
+[project]
+name = "json-hyperscan"
+version = "0.1.0"
+description = "Library for matching large numbers of JSONPath expressions simultaniously"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
