@@ -5,3 +5,8 @@ description = "Library for matching large numbers of JSONPath expressions simult
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.2",
+]
