@@ -11,3 +11,6 @@ wheels/
 
 # VSCode settings
 .vscode/
+
+# Environment variables
+.env
