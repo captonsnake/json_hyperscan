@@ -45,8 +45,6 @@ class TestHyperscan:
 
         hyperscan_db.add_pattern(json_path_pattern)
 
-        hyperscan_db.compile()
-
         # Act
         result = hyperscan_db.match_any(sample_data)
 
@@ -55,5 +53,5 @@ class TestHyperscan:
         jsonpath_results = [match.value for match in jsonpath_expr.find(sample_data)]
 
         # Assert
-        # assert result is not None, f"Pattern {json_path_pattern} should match but did not."
+        assert result is not None, f"Pattern {json_path_pattern} should match but did not."
         assert jsonpath_results, f"Pattern {json_path_pattern} produced different results."
