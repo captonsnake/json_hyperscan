@@ -59,7 +59,10 @@ wheels = [
 [[package]]
 name = "json-hyperscan"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
+dependencies = [
+    { name = "jsonpath-ng" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -70,6 +73,7 @@ dev = [
 ]
 
 [package.metadata]
+requires-dist = [{ name = "jsonpath-ng", specifier = ">=1.7.0" }]
 
 [package.metadata.requires-dev]
 dev = [

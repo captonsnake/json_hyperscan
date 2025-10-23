@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "Library for matching large numbers of JSONPath expressions simultaniously"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "jsonpath-ng>=1.7.0",
+]
 
 [dependency-groups]
 dev = [
@@ -13,3 +15,6 @@ dev = [
     "pytest>=8.4.2",
     "ruff>=0.14.1",
 ]
+
+[tool.uv]
+package = true
