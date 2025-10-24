@@ -19,6 +19,7 @@ class TestHyperscan:
     @pytest.mark.parametrize(
             "json_path_pattern",
             [
+                pytest.param("$.store.book", id="all_books"), # The list of all books
                 pytest.param("$.store.book[*].author", id="authors_of_all_books"), # The authors of all books
                 pytest.param("$..author", id="all_authors"), # All authors
                 pytest.param("$.store.*", id="all_things"), # All things, both books and bicycles
@@ -43,12 +44,34 @@ class TestHyperscan:
         hyperscan_db.add_pattern(json_path_pattern)
 
         # Act
-        result = hyperscan_db.match_any(sample_data)
+        result = hyperscan_db.find_any(sample_data)
 
         # Verify parity with jsonpath_ng
         jsonpath_expr = parse(json_path_pattern)
         jsonpath_results = [match.value for match in jsonpath_expr.find(sample_data)]
 
         # Assert
-        assert result is not None, f"Pattern {json_path_pattern} should match but did not."
-        assert jsonpath_results, f"Pattern {json_path_pattern} produced different results."
+        assert result in jsonpath_results, f"Pattern {json_path_pattern} did not match as expected."
+
+    @pytest.mark.parametrize(
+        "non_matching_pattern",
+        [
+            pytest.param("$.store.bicycle.color", id="no_bicycle_color"),  # No bicycle has a color field
+            pytest.param("$.store.book[?(@.price > 100)]", id="no_expensive_books"),  # No book is more than $100
+            pytest.param("$..book[?(@.author == 'Unknown Author')]", id="no_unknown_author"),  # No book by 'Unknown Author'
+            pytest.param("$.store.book[10]", id="no_eleventh_book"),  # There is no eleventh book
+            pytest.param("$.nonexistent.field", id="no_nonexistent_field"),  # Nonexistent field
+            pytest.param("$..book[?(@.price < 0)]", id="no_negative_price_books"),  # No book has a negative price
+        ],
+    )
+    def test_match_none(self, sample_data, non_matching_pattern):
+        # Arrange
+        hyperscan_db = JSONHyperscan()
+
+        hyperscan_db.add_pattern(non_matching_pattern)
+
+        # Act
+        result = hyperscan_db.find_any(sample_data)
+
+        # Assert
+        assert result is None, f"Pattern {non_matching_pattern} should not match but did."

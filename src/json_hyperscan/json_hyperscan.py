@@ -8,11 +8,7 @@ from jsonpath_ng.jsonpath import (
     Slice,
     Index,
     Fields,
-    Where,
-    WhereNot,
     Descendants,
-    Union,
-    Intersect,
 )
 from jsonpath_ng.ext.filter import Filter
 
@@ -26,6 +22,11 @@ class State:
         self.accepting = False
         self.value = None
         self.patterns = set()
+
+    def __repr__(self) -> str:
+        return (
+            f"State(id={self.id}, accepting={self.accepting}, patterns={self.patterns})"
+        )
 
 
 class JSONHyperscan:
@@ -46,10 +47,15 @@ class JSONHyperscan:
     def __add_pattern_states(self, node) -> State:
         if isinstance(node, Root):
             return self.root_state
-        elif isinstance(node, (Child, Where, WhereNot, Descendants, Union, Intersect)):
+        elif isinstance(node, (Child, Descendants)):
             parent_state = self.__add_pattern_states(node.left)
+            intermediate_state = self.__new_state()
+            transition_type = "Child" if isinstance(node, Child) else "Descendants"
+            parent_state.transitions[transition_type].add(intermediate_state)
             child_state = self.__add_pattern_states(node.right)
-            parent_state.transitions[node.__class__.__name__].add(child_state)
+            intermediate_state.transitions[node.right.__class__.__name__].add(
+                child_state
+            )
             return child_state
         elif isinstance(node, This):
             return self.__new_state()
@@ -66,9 +72,11 @@ class JSONHyperscan:
 
     def add_pattern(self, pattern: str) -> None:
         compiled_pattern = parse(pattern)
-        end_node: State = self.__add_pattern_states(compiled_pattern)
-        end_node.accepting = True
-        end_node.patterns.add(pattern)
+        self.__add_pattern_states(compiled_pattern)
+        end_state = self.__database[-1]
+        end_state.accepting = True
+        end_state.patterns.add(pattern)
+
         self.__patterns.add(pattern)
 
     def _match_helper(
@@ -79,10 +87,11 @@ class JSONHyperscan:
         visited = set()
         while stack:
             state, current_haystack = stack.pop()
-            for transition, next_states in state.transitions.items():
-                if state.accepting:
-                    yield (state.patterns, current_haystack)
 
+            if state.accepting:
+                yield (state.patterns, current_haystack)
+
+            for transition, next_states in state.transitions.items():
                 for next_state in next_states:
                     state_id = (next_state.id, id(current_haystack))
                     if state_id in visited:
@@ -99,23 +108,21 @@ class JSONHyperscan:
                                 stack.append((state, item))
 
                     elif transition == "Child":
-                        if isinstance(current_haystack, dict):
-                            for key, value in current_haystack.items():
-                                stack.append((next_state, value))
-                        elif isinstance(current_haystack, list):
-                            for item in current_haystack:
-                                stack.append((next_state, item))
+                        stack.append((next_state, current_haystack))
 
                     elif transition == "Fields":
                         if isinstance(current_haystack, dict):
                             for field in next_state.value:
-                                if field in current_haystack:
+                                if field == "*":
+                                    for val in current_haystack.values():
+                                        stack.append((next_state, val))
+                                elif field in current_haystack:
                                     stack.append((next_state, current_haystack[field]))
 
                     elif transition == "Index":
                         if isinstance(current_haystack, list):
                             index = next_state.value
-                            if 0 <= index < len(current_haystack):
+                            if index < len(current_haystack):
                                 stack.append((next_state, current_haystack[index]))
 
                     elif transition == "Slice":
@@ -131,15 +138,6 @@ class JSONHyperscan:
                                 match = list(filter_expr.find(item))
                                 if match:
                                     stack.append((next_state, item))
-
-    def match_any(self, haystack: list | dict) -> bool:
-        return next(self._match_helper(haystack), None) is not None
-
-    def match_all(self, haystack: list | dict) -> bool:
-        matches = set()
-        for patterns, _ in self._match_helper(haystack):
-            matches.update(patterns)
-        return len(matches) == len(self.__patterns)
 
     def find_any(self, haystack: list | dict) -> Any:
         match = next(self._match_helper(haystack), None)
