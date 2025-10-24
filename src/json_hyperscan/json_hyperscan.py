@@ -104,20 +104,24 @@ class JSONHyperscan:
                             for value in current_haystack.values():
                                 stack.append((state, value))
                         elif isinstance(current_haystack, list):
-                            for item in current_haystack:
+                            for item in reversed(current_haystack):
                                 stack.append((state, item))
 
                     elif transition == "Child":
                         stack.append((next_state, current_haystack))
 
                     elif transition == "Fields":
-                        if isinstance(current_haystack, dict):
-                            for field in next_state.value:
-                                if field == "*":
+                        for field in next_state.value:
+                            if field == "*":
+                                if isinstance(current_haystack, dict):
                                     for val in current_haystack.values():
                                         stack.append((next_state, val))
-                                elif field in current_haystack:
-                                    stack.append((next_state, current_haystack[field]))
+                                elif isinstance(current_haystack, list):
+                                    # Reverse to maintain order when popping from stack
+                                    for item in reversed(current_haystack):
+                                        stack.append((next_state, item))
+                            elif field in current_haystack:
+                                stack.append((next_state, current_haystack[field]))
 
                     elif transition == "Index":
                         if isinstance(current_haystack, list):
