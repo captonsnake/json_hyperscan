@@ -56,7 +56,7 @@ class TestHyperscan:
     @pytest.mark.parametrize(
         "non_matching_pattern",
         [
-            pytest.param("$.store.bicycle.color", id="no_bicycle_color"),  # No bicycle has a color field
+            pytest.param("$.store.bicycle.doors", id="no_bicycle_doors"),  # No bicycle has a doors field
             pytest.param("$.store.book[?(@.price > 100)]", id="no_expensive_books"),  # No book is more than $100
             pytest.param("$..book[?(@.author == 'Unknown Author')]", id="no_unknown_author"),  # No book by 'Unknown Author'
             pytest.param("$.store.book[10]", id="no_eleventh_book"),  # There is no eleventh book
@@ -72,6 +72,11 @@ class TestHyperscan:
 
         # Act
         result = hyperscan_db.find_any(sample_data)
+
+        # Verify parity with jsonpath_ng
+        jsonpath_expr = parse(non_matching_pattern)
+        jsonpath_results = [match.value for match in jsonpath_expr.find(sample_data)]
+        assert not jsonpath_results, f"Pattern {non_matching_pattern} should not match but did."
 
         # Assert
         assert result is None, f"Pattern {non_matching_pattern} should not match but did."
