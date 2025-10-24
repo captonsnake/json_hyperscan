@@ -66,7 +66,7 @@ class JSONHyperscan:
         elif isinstance(node, Fields):
             return self.__new_state(node.fields)
         elif isinstance(node, Filter):
-            return self.__new_state(node.filter)
+            return self.__new_state(node)
         else:
             raise NotImplementedError(f"Node type {type(node)} not implemented.")
 
@@ -132,12 +132,11 @@ class JSONHyperscan:
                                 stack.append((next_state, item))
 
                     elif transition == "Filter":
-                        filter_expr = next_state.value
-                        if isinstance(current_haystack, list):
-                            for item in current_haystack:
-                                match = list(filter_expr.find(item))
-                                if match:
-                                    stack.append((next_state, item))
+                        filter_expr: Filter = next_state.value
+                        filter_result = filter_expr.find(current_haystack)
+                        if filter_result:
+                            for match in filter_result:
+                                stack.append((next_state, match.value))
 
     def find_any(self, haystack: list | dict) -> Any:
         match = next(self._match_helper(haystack), None)
