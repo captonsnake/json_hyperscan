@@ -62,7 +62,7 @@ def test_compliance(case: Case) -> None:
     hyperscan_db = JSONHyperscan()
     hyperscan_db.add_pattern(case.selector)
 
-    result = hyperscan_db.find_all(case.document)
+    result = hyperscan_db.match_all(case.document)
     if case.results is None:
         assert result == case.result, f"Case {case.name} failed."
     else:

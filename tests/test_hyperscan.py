@@ -44,7 +44,7 @@ class TestHyperscan:
         hyperscan_db.add_pattern(json_path_pattern)
 
         # Act
-        result = hyperscan_db.find_any(sample_data)
+        result = hyperscan_db.match_any(sample_data)
 
         # Verify parity with jsonpath_ng
         jsonpath_expr = parse(json_path_pattern)
@@ -71,7 +71,7 @@ class TestHyperscan:
         hyperscan_db.add_pattern(non_matching_pattern)
 
         # Act
-        result = hyperscan_db.find_any(sample_data)
+        result = hyperscan_db.match_any(sample_data)
 
         # Verify parity with jsonpath_ng
         jsonpath_expr = parse(non_matching_pattern)
