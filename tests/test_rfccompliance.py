@@ -34,9 +34,7 @@ class Case:
     tags: List[str] = field(default_factory=list)
 
 
-SKIP: Dict[str, str] = {
-    "basic, name shorthand, extended unicode ☺": "Unicode handling not implemented fully yet.",
-}
+SKIP: Dict[str, str] = {}
 
 
 def cases() -> List[Case]:
@@ -63,6 +61,7 @@ def test_compliance(case: Case) -> None:
     hyperscan_db.add_pattern(case.selector)
 
     result = hyperscan_db.match_all(case.document)
+    result = [match.value for match in result]
     if case.results is None:
         assert result == case.result, f"Case {case.name} failed."
     else:

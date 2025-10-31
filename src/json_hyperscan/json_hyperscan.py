@@ -34,7 +34,7 @@ class State:
     __slots__ = ("transitions", "accepting", "value", "pattern")
 
     def __init__(self) -> None:
-        self.transitions: dict[_TransitionType, set["State"]] = defaultdict(set)
+        self.transitions: dict[_TransitionType, list["State"]] = defaultdict(list)
         self.accepting: bool = False
         self.value: _TransitionValueType | None = None
         self.pattern: str | None = None
@@ -55,25 +55,25 @@ class JSONHyperscan:
 
     def add_pattern(self, pattern: str) -> None:
         query: jsonpath_rfc9535.JSONPathQuery = jsonpath_rfc9535.compile(pattern)
-        states: list[State] = []
+        states: list[State] = [self.root_state]
         parent_states: Iterable[State] = (self.root_state,)
 
         for segment in query.segments:
             if isinstance(segment, segments.JSONPathRecursiveDescentSegment):
                 recursive_state = self.__new_state()
                 for parent_state in parent_states:
-                    parent_state.transitions[_TransitionType.Descendants].add(
+                    parent_state.transitions[_TransitionType.Descendants].append(
                         recursive_state
                     )
                 parent_states = (recursive_state,)
             elif isinstance(segment, segments.JSONPathChildSegment):
                 child_state = self.__new_state()
                 for parent_state in parent_states:
-                    parent_state.transitions[_TransitionType.Child].add(child_state)
+                    parent_state.transitions[_TransitionType.Child].append(child_state)
                 parent_states = (child_state,)
 
             next_parent_states = []
-            for selector in segment.selectors:
+            for selector in reversed(segment.selectors):
                 next_state = self.__new_state()
                 if isinstance(selector, selectors.NameSelector):
                     next_state.value = selector.name
@@ -97,15 +97,16 @@ class JSONHyperscan:
                     transition_type = _TransitionType.Filter
 
                 for parent_state in parent_states:
-                    parent_state.transitions[transition_type].add(next_state)
+                    parent_state.transitions[transition_type].append(next_state)
                 next_parent_states.append(next_state)
                 states.append(next_state)
 
             parent_states = next_parent_states
 
         for state in states:
-            state.accepting = True
-            state.pattern = pattern
+            if not state.transitions:
+                state.accepting = True
+                state.pattern = pattern
 
     def _match_helper(self, haystack: list | dict) -> Generator[Result, None, None]:
         stack: deque[tuple[State, Any]] = deque()
@@ -124,10 +125,10 @@ class JSONHyperscan:
                         continue
                     visited.add(state_id)
 
-                    if transition == _TransitionType.RecursiveField:
+                    if transition == _TransitionType.Descendants:
                         stack.append((next_state, current_haystack))
                         if isinstance(current_haystack, dict):
-                            for value in current_haystack.values():
+                            for value in reversed(current_haystack.values()):
                                 stack.append((state, value))
                         elif isinstance(current_haystack, list):
                             for item in reversed(current_haystack):
@@ -140,7 +141,7 @@ class JSONHyperscan:
                         field = next_state.value
                         if field == "*":
                             if isinstance(current_haystack, dict):
-                                for val in current_haystack.values():
+                                for val in reversed(current_haystack.values()):
                                     stack.append((next_state, val))
                             elif isinstance(current_haystack, list):
                                 # Reverse to maintain order when popping from stack
@@ -157,9 +158,20 @@ class JSONHyperscan:
 
                     elif transition == _TransitionType.Slice:
                         if isinstance(current_haystack, list):
-                            start, end = next_state.value
-                            for item in current_haystack[start:end]:
-                                stack.append((next_state, item))
+                            s = next_state.value
+                            if s.step != 0:
+                                with suppress(IndexError):
+                                    for item in reversed(current_haystack[s]):
+                                        stack.append((next_state, item))
+                        elif isinstance(current_haystack, dict):
+                            s = next_state.value
+                            if s.step != 0:
+                                with suppress(IndexError):
+                                    items = list(current_haystack.values())[
+                                        next_state.value
+                                    ]
+                                    for item in reversed(items):
+                                        stack.append((next_state, item))
 
                     elif transition == _TransitionType.Filter:
                         filter_expr: FilterExpression = next_state.value
