@@ -22,7 +22,6 @@ class _TransitionType(enum.Enum):
     Field = "Field"
     Child = "Child"
     Descendants = "Descendants"
-    RecursiveField = "RecursiveField"
     Index = "Index"
     Slice = "Slice"
     Filter = "Filter"
@@ -78,11 +77,6 @@ class JSONHyperscan:
                 if isinstance(selector, selectors.NameSelector):
                     next_state.value = selector.name
                     transition_type = _TransitionType.Field
-                elif isinstance(
-                    segment, segments.JSONPathRecursiveDescentSegment
-                ) and isinstance(selector, selectors.WildcardSelector):
-                    next_state.value = "*"
-                    transition_type = _TransitionType.RecursiveField
                 elif isinstance(selector, selectors.WildcardSelector):
                     next_state.value = "*"
                     transition_type = _TransitionType.Field
