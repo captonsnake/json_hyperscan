@@ -126,13 +126,13 @@ class JSONHyperscan:
                     visited.add(state_id)
 
                     if transition == _TransitionType.Descendants:
-                        stack.append((next_state, current_haystack))
                         if isinstance(current_haystack, dict):
                             for value in reversed(current_haystack.values()):
                                 stack.append((state, value))
                         elif isinstance(current_haystack, list):
                             for item in reversed(current_haystack):
                                 stack.append((state, item))
+                        stack.append((next_state, current_haystack))
 
                     elif transition == _TransitionType.Child:
                         stack.append((next_state, current_haystack))
