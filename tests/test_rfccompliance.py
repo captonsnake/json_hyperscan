@@ -1,8 +1,4 @@
-"""Test Python JSONPath against the JSONPath Compliance Test Suite.
-
-The CTS is a submodule located in /tests/cts. After a git clone, run
-`git submodule update --init` from the root of the repository.
-
+"""
 References:
 https://github.com/jg-rp/python-jsonpath-rfc9535/tree/main/tests/test_compliance.py
 """
