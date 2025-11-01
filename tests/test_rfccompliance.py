@@ -68,10 +68,11 @@ def test_compliance(case: Case) -> None:
         assert result in case.results, f"Case {case.name} failed."
 
 
-# @pytest.mark.parametrize("case", invalid_cases(), ids=operator.attrgetter("name"))
-# def test_invalid_selectors(case: Case) -> None:
-#     if case.name in SKIP:
-#         pytest.skip(reason=SKIP[case.name])  # no cov
+@pytest.mark.parametrize("case", invalid_cases(), ids=operator.attrgetter("name"))
+def test_invalid_selectors(case: Case) -> None:
+    if case.name in SKIP:
+        pytest.skip(reason=SKIP[case.name])  # no cov
 
-#     with pytest.raises(jsonpath.JSONPathError):
-#         jsonpath.compile(case.selector)
+    hyperscan_db = JSONHyperscan()
+    with pytest.raises(ValueError):
+        hyperscan_db.add_pattern(case.selector)
