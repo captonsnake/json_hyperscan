@@ -7,7 +7,7 @@ from typing import Any, Generator, Iterable
 import jsonpath_rfc9535
 from jsonpath_rfc9535 import segments
 from jsonpath_rfc9535 import selectors
-from jsonpath_rfc9535.filter_expressions import FilterExpression
+from jsonpath_rfc9535.filter_expressions import FilterContext, FilterExpression
 
 _TransitionValueType = str | int | slice | FilterExpression
 
@@ -168,11 +168,25 @@ class JSONHyperscan:
                                         stack.append((next_state, item))
 
                     elif transition == _TransitionType.Filter:
-                        filter_expr: FilterExpression = next_state.value
-                        filter_result = filter_expr.evaluate(current_haystack)
-                        if filter_result:
-                            for match in filter_result:
-                                stack.append((next_state, match.value))
+                        expr: FilterExpression = next_state.value
+                        if isinstance(current_haystack, list):
+                            for item in reversed(current_haystack):
+                                context = FilterContext(
+                                    env=jsonpath_rfc9535.DEFAULT_ENV,
+                                    root=haystack,
+                                    current=item,
+                                )
+                                if expr.evaluate(context):
+                                    stack.append((next_state, item))
+                        elif isinstance(current_haystack, dict):
+                            for val in reversed(current_haystack.values()):
+                                context = FilterContext(
+                                    env=jsonpath_rfc9535.DEFAULT_ENV,
+                                    root=haystack,
+                                    current=val,
+                                )
+                                if expr.evaluate(context):
+                                    stack.append((next_state, val))
 
     def match_any(self, haystack: list | dict) -> Result | None:
         return next(self._match_helper(haystack), None)
