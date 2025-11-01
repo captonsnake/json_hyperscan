@@ -1,3 +1,4 @@
+import jsonpath_rfc9535
 from json_hyperscan.json_hyperscan import JSONHyperscan
 import pytest
 import json
@@ -45,6 +46,8 @@ class TestHyperscan:
 
         # Act
         result = hyperscan_db.match_any(sample_data)
+        assert result
+        result = result.value
 
         # Verify parity with jsonpath_ng
         jsonpath_expr = parse(json_path_pattern)
@@ -52,6 +55,41 @@ class TestHyperscan:
 
         # Assert
         assert result in jsonpath_results, f"Pattern {json_path_pattern} did not match as expected."
+
+    def test_match_all(self, sample_data):
+        # Arrange
+        patterns = [
+            "$.store.book",
+            "$.store.book[*].author",
+            "$..author",
+            "$.store.*",
+            "$.store..price",
+            "$..book[2]",
+            "$..book[-2]",
+            "$..book[:2]",
+            "$..book[1:2]",
+            "$..book[-2:]",
+            "$..book[2:]",
+            "$..book[?(@.isbn)]",
+            "$.store.book[?(@.price < 10)]",
+            "$..*",
+        ]
+        hyperscan_db = JSONHyperscan()
+
+        for pattern in patterns:
+            hyperscan_db.add_pattern(pattern)
+
+        # Act
+        results = hyperscan_db.match_all(sample_data)
+
+        # Verify parity with jsonpath_ng
+        for pattern in patterns:
+            jsonpath_expr = jsonpath_rfc9535.compile(pattern)
+            expected_values = [match.value for match in jsonpath_expr.find(sample_data)]
+
+            matched_values = [match.value for match in results if match.pattern == pattern]
+            for value in matched_values:
+                assert value in expected_values, f"Pattern {pattern} did not match as expected."
 
     @pytest.mark.parametrize(
         "non_matching_pattern",
@@ -72,6 +110,7 @@ class TestHyperscan:
 
         # Act
         result = hyperscan_db.match_any(sample_data)
+        assert not result
 
         # Verify parity with jsonpath_ng
         jsonpath_expr = parse(non_matching_pattern)
