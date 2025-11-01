@@ -53,7 +53,10 @@ class JSONHyperscan:
         return state
 
     def add_pattern(self, pattern: str) -> None:
-        query: jsonpath_rfc9535.JSONPathQuery = jsonpath_rfc9535.compile(pattern)
+        try:
+            query: jsonpath_rfc9535.JSONPathQuery = jsonpath_rfc9535.compile(pattern)
+        except Exception as e:
+            raise ValueError(f"Invalid JSONPath pattern: {pattern}") from e
         states: list[State] = [self.root_state]
         parent_states: Iterable[State] = (self.root_state,)
 
@@ -141,7 +144,10 @@ class JSONHyperscan:
                                 # Reverse to maintain order when popping from stack
                                 for item in reversed(current_haystack):
                                     stack.append((next_state, item))
-                        elif field in current_haystack:
+                        elif (
+                            isinstance(current_haystack, dict)
+                            and field in current_haystack
+                        ):
                             stack.append((next_state, current_haystack[field]))
 
                     elif transition == _TransitionType.Index:
