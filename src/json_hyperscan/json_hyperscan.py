@@ -14,11 +14,15 @@ _TransitionValueType = str | int | slice | FilterExpression
 
 @dataclass
 class Result:
+    """A match result from the hyperscan automaton."""
+
     pattern: str
     value: Any
 
 
 class _TransitionType(enum.Enum):
+    """Types of transitions in the hyperscan automaton."""
+
     Field = "Field"
     Child = "Child"
     Descendants = "Descendants"
@@ -27,38 +31,50 @@ class _TransitionType(enum.Enum):
     Filter = "Filter"
 
 
-class State:
+class _State:
     """A state in the hyperscan automaton."""
 
     __slots__ = ("transitions", "accepting", "value", "pattern")
 
     def __init__(self) -> None:
-        self.transitions: dict[_TransitionType, list["State"]] = defaultdict(list)
-        self.accepting: bool = False
+        self.transitions: dict[_TransitionType, list["_State"]] = defaultdict(list)
+        self.accepting: bool = False  # An Accepting state indicates a match
         self.value: _TransitionValueType | None = None
         self.pattern: str | None = None
 
 
 class JSONHyperscan:
     def __init__(self, patterns: list[str] | None = None) -> None:
-        self.__database: list[State] = []
-        self.root_state: State = self.__new_state()
+        """JSON Hyperscan automaton for matching JSONPath patterns.
+
+        :param patterns: Patterns to add to the automaton on initialization, defaults to None
+        :type patterns: list[str] | None, optional
+        """
+        self.__database: list[_State] = []
+        self.__start: _State = self.__new_state()
 
         for pattern in patterns or []:
             self.add_pattern(pattern)
 
-    def __new_state(self) -> State:
-        state = State()
+    def __new_state(self) -> _State:
+        state = _State()
         self.__database.append(state)
         return state
 
     def add_pattern(self, pattern: str) -> None:
+        """
+        Add a JSONPath pattern to the hyperscan automaton.
+
+        :param pattern: The JSONPath pattern to add.
+        :type pattern: str
+        :raises ValueError: If the pattern is invalid.
+        """
         try:
             query: jsonpath_rfc9535.JSONPathQuery = jsonpath_rfc9535.compile(pattern)
         except Exception as e:
             raise ValueError(f"Invalid JSONPath pattern: {pattern}") from e
-        states: list[State] = [self.root_state]
-        parent_states: Iterable[State] = (self.root_state,)
+        states: list[_State] = [self.__start]
+        parent_states: Iterable[_State] = (self.__start,)
 
         for segment in query.segments:
             if isinstance(segment, segments.JSONPathRecursiveDescentSegment):
@@ -106,8 +122,16 @@ class JSONHyperscan:
                 state.pattern = pattern
 
     def _match_helper(self, haystack: list | dict) -> Generator[Result, None, None]:
-        stack: deque[tuple[State, Any]] = deque()
-        stack.append((self.root_state, haystack))
+        """
+        Helper method to perform matching on the haystack.
+
+        :param haystack: The JSON data to match against.
+        :type haystack: list | dict
+        :yield: Match results.
+        :rtype: Generator[Result, None, None]
+        """
+        stack: deque[tuple[_State, Any]] = deque()
+        stack.append((self.__start, haystack))
         visited = set()
         while stack:
             state, current_haystack = stack.pop()
@@ -194,11 +218,27 @@ class JSONHyperscan:
                                 if expr.evaluate(context):
                                     stack.append((next_state, val))
 
-    def match_any(self, haystack: list | dict) -> Result | None:
+    def match_any(self, haystack: Any) -> Result | None:
+        """
+        Match any result for the patterns in the automaton.
+
+        :param haystack: The JSON data to match against.
+        :type haystack: Any
+        :return: Any result
+        :rtype: Result | None
+        """
         return next(self._match_helper(haystack), None)
 
-    def match_all(self, haystack: list | dict) -> list[Result]:
+    def match_all(self, haystack: Any) -> list[Result]:
+        """
+        Match all results for the patterns in the automaton.
+
+        :param haystack: The JSON data to match against.
+        :type haystack: Any
+        :return: All matches in the haystack
+        :rtype: list[Result]
+        """
         return list(self._match_helper(haystack))
 
-    def iter_matches(self, haystack: list | dict) -> Generator[Result, None, None]:
+    def iter_matches(self, haystack: Any) -> Generator[Result, None, None]:
         yield from self._match_helper(haystack)
