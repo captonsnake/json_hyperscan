@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "jsonpath-ng>=1.7.0",
+    "jsonpath-rfc9535>=0.1.6",
 ]
 
 [dependency-groups]
