@@ -108,6 +108,11 @@ class JSONHyperscan:
                 elif isinstance(selector, selectors.FilterSelector):
                     next_state.value = selector.expression
                     transition_type = _TransitionType.Filter
+                else:
+                    # Defensive: explicitly fail for unsupported selector types.
+                    raise ValueError(
+                        f"Unsupported selector type in pattern '{pattern}': {type(selector)!r}"
+                    )
 
                 for parent_state in parent_states:
                     parent_state.transitions[transition_type].append(next_state)
@@ -137,7 +142,8 @@ class JSONHyperscan:
             state, current_haystack = stack.pop()
 
             if state.accepting:
-                yield Result(pattern=state.pattern, value=current_haystack)
+                if state.pattern:
+                    yield Result(pattern=state.pattern, value=current_haystack)
 
             for transition, next_states in state.transitions.items():
                 for next_state in next_states:
@@ -177,28 +183,29 @@ class JSONHyperscan:
                     elif transition == _TransitionType.Index:
                         if isinstance(current_haystack, list):
                             index = next_state.value
-                            with suppress(IndexError):
-                                stack.append((next_state, current_haystack[index]))
+                            if isinstance(index, int):
+                                with suppress(IndexError):
+                                    stack.append((next_state, current_haystack[index]))
 
                     elif transition == _TransitionType.Slice:
-                        if isinstance(current_haystack, list):
-                            s = next_state.value
-                            if s.step != 0:
+                        s = next_state.value
+                        if isinstance(s, slice):
+                            if s.step == 0:
+                                continue
+                            if isinstance(current_haystack, list):
                                 with suppress(IndexError):
                                     for item in reversed(current_haystack[s]):
                                         stack.append((next_state, item))
-                        elif isinstance(current_haystack, dict):
-                            s = next_state.value
-                            if s.step != 0:
+                            elif isinstance(current_haystack, dict):
                                 with suppress(IndexError):
-                                    items = list(current_haystack.values())[
-                                        next_state.value
-                                    ]
+                                    items = list(current_haystack.values())[s]
                                     for item in reversed(items):
                                         stack.append((next_state, item))
 
                     elif transition == _TransitionType.Filter:
-                        expr: FilterExpression = next_state.value
+                        expr = next_state.value
+                        if not isinstance(expr, FilterExpression):
+                            continue
                         if isinstance(current_haystack, list):
                             for item in reversed(current_haystack):
                                 context = FilterContext(
