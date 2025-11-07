@@ -24,6 +24,16 @@ pip install -U pip
 pip install -e .[dev]
 ```
 
+Note about the compliance test-suite
+----------------------------------
+
+The project includes the JSONPath compliance tests as a git submodule at `tests/jsonpath-compliance-test-suite`.
+CI checks out submodules automatically, but if you're running tests locally you may need to initialize it first:
+
+```bash
+git submodule update --init --recursive
+```
+
 Or, if you only need runtime installation (no dev extras):
 
 ```bash
