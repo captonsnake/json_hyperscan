@@ -8,21 +8,17 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: [3.12, 3.13]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: [3.11, 3.12, 3.13]
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # fetch submodules if repository uses them
-          submodules: 'recursive'
-
-      - name: Initialize submodules
-        # Ensure any submodules are initialized and updated
-        run: git submodule update --init --recursive
+          submodules: true
 
       - name: Set up Python
         uses: actions/setup-python@v4
