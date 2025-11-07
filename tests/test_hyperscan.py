@@ -1,5 +1,5 @@
 import jsonpath_rfc9535
-from json_hyperscan.json_hyperscan import JSONHyperscan
+from json_hyperscan import JSONHyperscan
 import pytest
 import json
 from jsonpath_ng.ext import parse

@@ -1,6 +1,6 @@
 import pytest
 
-from json_hyperscan.json_hyperscan import JSONHyperscan
+from json_hyperscan import JSONHyperscan
 
 
 def test_unsupported_selector_type_raises_value_error():

@@ -14,7 +14,7 @@ from typing import Optional
 
 import pytest
 
-from json_hyperscan.json_hyperscan import JSONHyperscan
+from json_hyperscan import JSONHyperscan
 
 
 @dataclass
