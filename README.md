@@ -21,7 +21,11 @@ This project uses modern Python tooling. Create a virtual environment and instal
 python -m venv .venv
 source .venv/bin/activate
 pip install -U pip
-pip install -e .[dev]
+
+# Recommended (fast, reproducible): install uv and use it to manage deps
+pip install uv
+# Create a venv and install project + dev deps using uv's pip frontend
+uv pip install -e .[dev]
 ```
 
 Note about the compliance test-suite

@@ -31,16 +31,16 @@ jobs:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
 
-      - name: Upgrade pip
-        run: python -m pip install --upgrade pip
+      - name: Upgrade pip and install uv
+        run: python -m pip install --upgrade pip uv
 
-      - name: Install package and dev dependencies
+      - name: Install package and dev dependencies with uv
         run: |
-          pip install .
-          pip install ".[dev]"
+          # Use uv's fast pip-compatible frontend to install the project and dev deps
+          uv pip install -e .[dev]
 
-      - name: Lint with ruff
-        run: ruff check .
+      - name: Lint with ruff (via uv)
+        run: uv run ruff check .
 
-      - name: Run tests
-        run: pytest -q
+      - name: Run tests (via uv)
+        run: uv run pytest -q
