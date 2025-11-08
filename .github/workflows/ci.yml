@@ -37,7 +37,7 @@ jobs:
       - name: Install package and dev dependencies with uv
         run: |
           # Use uv's fast pip-compatible frontend to install the project and dev deps
-          uv pip install -e .[dev]
+          uv sync --dev
 
       - name: Lint with ruff (via uv)
         run: uv run ruff check .
