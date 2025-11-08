@@ -2,11 +2,28 @@
 name = "json-hyperscan"
 version = "0.1.0"
 description = "Library for matching large numbers of JSONPath expressions simultaniously"
+authors = [
+    {name="Samual McCracken", email="mccracken.landon+pip@gmail.com"}
+]
 readme = "README.md"
 requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Topic :: File Formats :: JSON",
+]
+license = "MIT"
+license-files = ["LICENSE.txt"]
+
 dependencies = [
     "jsonpath-rfc9535>=0.1.6",
 ]
+
+[project.urls]
+Homepath = "https://github.com/captonsnake/json_hyperscan"
+Issues = "https://github.com/captonsnake/json_hyperscan/issues"
+
 
 [dependency-groups]
 dev = [
@@ -15,6 +32,10 @@ dev = [
     "pytest>=8.4.2",
     "ruff>=0.14.1",
 ]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.uv]
 package = true

@@ -6,31 +6,43 @@ on:
       - 'v*.*.*'
 
 jobs:
-  build-and-publish:
+  build:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: 'recursive'
-
-      - name: Initialize submodules
-        run: git submodule update --init --recursive
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.12'
 
-      - name: Upgrade pip
-        run: python -m pip install --upgrade pip setuptools wheel build
+      - name: Install build system
+        run: python -m pip install --upgrade pip uv
 
       - name: Build distributions
-        run: python -m build
+        run: uv build
 
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.6.0
+      - name: Store dist files
+        uses: actions/upload-artifact@v4
         with:
-          user: __token__
-          password: ${{ secrets.PYPI_API_TOKEN }}
+          name: dist-files
+          path: dist/
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/json_hyperscan
+    permissions:
+      id-token: write
+    steps:
+      - name: Download dist files
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-files
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
